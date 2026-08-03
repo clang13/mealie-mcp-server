@@ -255,3 +255,52 @@ async def test_upload_recipe_asset_surfaces_client_failure(invoke, fetcher, tmp_
 
     with pytest.raises(ToolError, match="Error uploading recipe asset"):
         await invoke("upload_recipe_asset_file", slug="test-recipe", asset_path=str(asset))
+async def test_patch_recipe_merges_settings_onto_current(invoke, fetcher):
+    await invoke("patch_recipe", slug="test-recipe", settings={"showAssets": False})
+
+    body = fetcher.last("PATCH", "/api/recipes/")["json"]
+    # Mealie drops toggles omitted from a settings PATCH, so the tool reads the
+    # current object and sends it whole -- locked must survive untouched.
+    assert body["settings"] == {
+        "public": False,
+        "showNutrition": True,
+        "showAssets": False,
+        "landscapeView": False,
+        "disableComments": False,
+        "locked": True,
+    }
+
+
+async def test_patch_recipe_settings_reads_current_first(invoke, fetcher):
+    await invoke("patch_recipe", slug="test-recipe", settings={"public": True})
+
+    # the merge needs the existing settings, so a GET precedes the PATCH
+    methods = [r["method"] for r in fetcher.requests]
+    assert methods == ["GET", "PATCH"]
+
+
+async def test_patch_recipe_without_settings_issues_no_extra_get(invoke, fetcher):
+    await invoke("patch_recipe", slug="test-recipe", description="Just a description")
+
+    assert [r["method"] for r in fetcher.requests] == ["PATCH"]
+    assert "settings" not in fetcher.last("PATCH", "/api/recipes/")["json"]
+
+
+async def test_create_recipe_full_merges_settings_onto_seeded(invoke, fetcher):
+    await invoke(
+        "create_recipe_full", name="Visible", settings={"showAssets": True}
+    )
+
+    body = fetcher.last("PUT", "/api/recipes/")["json"]
+    assert body["settings"]["showAssets"] is True
+    # the toggles Mealie seeded are preserved rather than reset to model defaults
+    assert body["settings"]["locked"] is True
+    assert body["settings"]["showNutrition"] is True
+
+
+async def test_create_recipe_full_without_settings_preserves_seeded(invoke, fetcher):
+    await invoke("create_recipe_full", name="Plain")
+
+    body = fetcher.last("PUT", "/api/recipes/")["json"]
+    assert body["settings"]["locked"] is True
+    assert body["settings"]["showAssets"] is True
