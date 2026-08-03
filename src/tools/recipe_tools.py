@@ -15,6 +15,7 @@ from models.recipe import (
     RecipeIngredientInput,
     RecipeInstruction,
     RecipeInstructionInput,
+    RecipeNutrition,
     RecipeTag,
     RecipeTool,
 )
@@ -365,6 +366,7 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
         instructions: Optional[List[Union[str, RecipeInstructionInput]]] = None,
         tags: Optional[List[OrganizerRef]] = None,
         tools: Optional[List[OrganizerRef]] = None,
+        nutrition: Optional[RecipeNutrition] = None,
     ) -> Dict[str, Any]:
         """Create a recipe and populate all of its content in one call.
 
@@ -392,6 +394,8 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
             instructions: Instruction strings and/or structured instruction objects.
             tags: Existing Mealie tags (id+name) to assign; look up with get_tags.
             tools: Existing Mealie tools (id+name) to assign; look up with get_tools.
+            nutrition: Per-serving nutrition values (calories in kcal, sodium and
+                cholesterol in mg, the rest in grams). Omitted keys stay empty.
 
         Returns:
             Dict[str, Any]: The created recipe details.
@@ -428,6 +432,8 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
                 recipe.tags = [RecipeTag(**_organizer_payload(t)) for t in tags]
             if tools is not None:
                 recipe.tools = [RecipeTool(**_organizer_payload(t)) for t in tools]
+            if nutrition is not None:
+                recipe.nutrition = nutrition
             _normalize_references(recipe)
 
             updated = mealie.update_recipe(slug, recipe.model_dump(exclude_none=True))
@@ -459,6 +465,7 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
         org_url: Optional[str] = None,
         tags: Optional[List[OrganizerRef]] = None,
         tools: Optional[List[OrganizerRef]] = None,
+        nutrition: Optional[RecipeNutrition] = None,
     ) -> Dict[str, Any]:
         """Partially update a recipe (only updates provided fields).
 
@@ -475,6 +482,10 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
             org_url: Source URL for the recipe (shown as a link in the Mealie UI).
             tags: Existing Mealie tags (id+name) to set; look up with get_tags.
             tools: Existing Mealie tools (id+name) to set; look up with get_tools.
+            nutrition: Per-serving nutrition values (calories in kcal, sodium and
+                cholesterol in mg, the rest in grams). Mealie replaces the whole
+                nutrition object, so pass every value you want to keep — omitted
+                keys are cleared, not preserved.
 
         Returns:
             Dict[str, Any]: The updated recipe details.
@@ -505,6 +516,8 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
                 recipe_data["tags"] = [_organizer_payload(t) for t in tags]
             if tools is not None:
                 recipe_data["tools"] = [_organizer_payload(t) for t in tools]
+            if nutrition is not None:
+                recipe_data["nutrition"] = nutrition.model_dump(exclude_none=True)
 
             if not recipe_data:
                 raise ValueError("At least one field must be provided to update")
