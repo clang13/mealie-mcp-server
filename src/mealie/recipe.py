@@ -308,13 +308,26 @@ class RecipeMixin:
         logger.info({"message": "Uploading recipe image", "slug": slug, "filename": filename})
         return self._handle_request("PUT", f"/api/recipes/{slug}/image", files=files)
 
-    def upload_recipe_asset(self, slug: str, asset_data: bytes, filename: str) -> Dict[str, Any]:
+    def upload_recipe_asset(
+        self,
+        slug: str,
+        asset_data: bytes,
+        filename: str,
+        name: Optional[str] = None,
+        icon: str = "mdi-file",
+    ) -> Dict[str, Any]:
         """Upload a recipe asset file (multipart upload)
+
+        Mealie requires name, icon, and extension alongside the file. The
+        extension is derived from the filename and the display name defaults to
+        the filename stem, matching what the Mealie web UI sends.
 
         Args:
             slug: The slug identifier of the recipe
             asset_data: Binary asset data
             filename: Name of the asset file
+            name: Display name for the asset (defaults to the filename stem)
+            icon: mdi icon name shown next to the asset in the Mealie UI
 
         Returns:
             JSON response containing the uploaded asset details
@@ -326,10 +339,23 @@ class RecipeMixin:
         if not filename:
             raise ValueError("Filename cannot be empty")
 
+        stem, _, extension = filename.rpartition(".")
+        if not extension or not stem:
+            raise ValueError(
+                f"Asset filename must have an extension, got '{filename}'"
+            )
+
         files = {"file": (filename, asset_data)}
+        data = {
+            "name": name or stem,
+            "icon": icon,
+            "extension": extension,
+        }
 
         logger.info({"message": "Uploading recipe asset", "slug": slug, "filename": filename})
-        return self._handle_request("POST", f"/api/recipes/{slug}/assets", files=files)
+        return self._handle_request(
+            "POST", f"/api/recipes/{slug}/assets", files=files, data=data
+        )
 
     def delete_recipe(self, slug: str) -> Dict[str, Any]:
         """Delete a recipe

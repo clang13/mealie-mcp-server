@@ -14,6 +14,7 @@ from mcp.server.fastmcp import FastMCP
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from mealie import MealieFetcher  # noqa: E402
+from mealie.client import MealieApiError  # noqa: E402
 from tools import register_all_tools  # noqa: E402
 
 # A minimal but schema-valid recipe payload (satisfies the required Recipe
@@ -43,6 +44,12 @@ class FakeFetcher(MealieFetcher):
         self.requests = []
         self.created_slug = "test-recipe"
         self.recipe = dict(BASE_RECIPE)
+        # url fragment -> MealieApiError to raise, for client-failure tests
+        self.failures = {}
+
+    def fail_on(self, url_contains, status_code=422, message="Mealie rejected it"):
+        """Make any request whose url contains this fragment raise."""
+        self.failures[url_contains] = MealieApiError(status_code, message)
 
     def _handle_request(self, method, url, **kwargs):
         self.requests.append(
@@ -51,8 +58,13 @@ class FakeFetcher(MealieFetcher):
                 "url": url,
                 "json": kwargs.get("json"),
                 "params": kwargs.get("params"),
+                "data": kwargs.get("data"),
+                "files": kwargs.get("files"),
             }
         )
+        for fragment, error in self.failures.items():
+            if fragment in url:
+                raise error
         if method == "POST" and url == "/api/recipes":
             name = (kwargs.get("json") or {}).get("name")
             if name:
@@ -61,6 +73,13 @@ class FakeFetcher(MealieFetcher):
             return self.created_slug
         if method == "GET" and url.startswith("/api/recipes/") and url.count("/") == 3:
             return dict(self.recipe)
+        if method == "POST" and url.endswith("/assets"):
+            data = kwargs.get("data") or {}
+            return {
+                "name": data.get("name"),
+                "icon": data.get("icon"),
+                "fileName": f"{data.get('name')}.{data.get('extension')}",
+            }
         if method in ("PUT", "PATCH") and url.startswith("/api/recipes/"):
             return kwargs.get("json", {})
         # single-record GET (the fetch-merge update path reads the existing record)

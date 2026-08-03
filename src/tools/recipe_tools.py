@@ -624,12 +624,23 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
             raise ToolError(error_msg)
 
     @mcp.tool()
-    def upload_recipe_asset_file(slug: str, asset_path: str) -> Dict[str, Any]:
+    def upload_recipe_asset_file(
+        slug: str,
+        asset_path: str,
+        name: Optional[str] = None,
+        icon: str = "mdi-file",
+    ) -> Dict[str, Any]:
         """Upload an asset file (document, PDF, etc.) for a recipe.
 
         Args:
             slug: The unique text identifier for the recipe.
-            asset_path: Local file path to the asset to upload.
+            asset_path: Local file path to the asset to upload. Mealie derives
+                the stored filename from the name and rejects extensions
+                outside its allow-list with a 400.
+            name: Display name for the asset (defaults to the filename stem).
+            icon: mdi icon shown next to the asset in the Mealie UI. The UI
+                offers mdi-file (default), mdi-file-pdf-box, mdi-file-image,
+                mdi-code-json, and mdi-silverware-fork-knife.
 
         Returns:
             Dict[str, Any]: Details of the uploaded asset.
@@ -648,7 +659,9 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
                 asset_data = f.read()
 
             filename = os.path.basename(asset_path)
-            return mealie.upload_recipe_asset(slug, asset_data, filename)
+            return mealie.upload_recipe_asset(
+                slug, asset_data, filename, name=name, icon=icon
+            )
         except Exception as e:
             error_msg = f"Error uploading recipe asset '{slug}': {str(e)}"
             logger.error({"message": error_msg})
