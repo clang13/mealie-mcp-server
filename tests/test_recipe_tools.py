@@ -1,6 +1,9 @@
 """Tests for the recipe-authoring tools (structured ingredients, full create,
 patch fields, concise output)."""
 
+import pytest
+from mcp.server.fastmcp.exceptions import ToolError
+
 
 async def test_create_recipe_accepts_flat_and_structured(invoke, fetcher):
     await invoke(
@@ -184,3 +187,71 @@ async def test_get_recipe_concise_includes_orgurl_tags_tools(invoke, fetcher):
     assert out["orgURL"] == "https://example.com/r"
     assert out["tags"] == [{"id": "t1", "name": "Quick", "slug": "quick"}]
     assert out["tools"][0]["name"] == "Pfanne"
+
+
+async def test_upload_recipe_asset_sends_name_icon_and_extension(invoke, fetcher, tmp_path):
+    asset = tmp_path / "braise-notes.pdf"
+    asset.write_bytes(b"%PDF-1.4 fake")
+
+    await invoke("upload_recipe_asset_file", slug="test-recipe", asset_path=str(asset))
+
+    req = fetcher.last("POST", "/assets")
+    assert req["url"] == "/api/recipes/test-recipe/assets"
+    # Mealie requires all three form fields; extension is sent without the dot
+    assert req["data"] == {
+        "name": "braise-notes",
+        "icon": "mdi-file",
+        "extension": "pdf",
+    }
+    assert req["files"]["file"][0] == "braise-notes.pdf"
+    # multipart only: no JSON body, so httpx picks the boundary content type
+    assert req["json"] is None
+
+
+async def test_upload_recipe_asset_honours_explicit_name_and_icon(invoke, fetcher, tmp_path):
+    asset = tmp_path / "scan.PDF"
+    asset.write_bytes(b"%PDF-1.4 fake")
+
+    await invoke(
+        "upload_recipe_asset_file",
+        slug="test-recipe",
+        asset_path=str(asset),
+        name="Original scan",
+        icon="mdi-file-pdf-box",
+    )
+
+    assert fetcher.last("POST", "/assets")["data"] == {
+        "name": "Original scan",
+        "icon": "mdi-file-pdf-box",
+        "extension": "PDF",
+    }
+
+
+async def test_upload_recipe_asset_rejects_extensionless_filename(invoke, fetcher, tmp_path):
+    asset = tmp_path / "README"
+    asset.write_bytes(b"no extension")
+
+    with pytest.raises(ToolError, match="must have an extension"):
+        await invoke("upload_recipe_asset_file", slug="test-recipe", asset_path=str(asset))
+
+    assert fetcher.last("POST", "/assets") is None
+
+
+async def test_upload_recipe_asset_reports_missing_file(invoke, fetcher, tmp_path):
+    with pytest.raises(ToolError, match="Asset file not found"):
+        await invoke(
+            "upload_recipe_asset_file",
+            slug="test-recipe",
+            asset_path=str(tmp_path / "absent.pdf"),
+        )
+
+    assert fetcher.last("POST", "/assets") is None
+
+
+async def test_upload_recipe_asset_surfaces_client_failure(invoke, fetcher, tmp_path):
+    asset = tmp_path / "notes.pdf"
+    asset.write_bytes(b"%PDF-1.4 fake")
+    fetcher.fail_on("/assets", 400, "Unsupported file extension")
+
+    with pytest.raises(ToolError, match="Error uploading recipe asset"):
+        await invoke("upload_recipe_asset_file", slug="test-recipe", asset_path=str(asset))
