@@ -97,6 +97,19 @@ class RecipeNutrition(BaseModel):
     )
 
 
+class RecipeNote(BaseModel):
+    """A free-text note attached to a recipe.
+
+    Cookbooks use these for substitutions, storage advice, and variations.
+    Mealie requires a title on every note; it may be empty but not absent.
+    """
+
+    title: str = Field(
+        default="", description='Heading for the note, e.g. "Storage" or "Variations".'
+    )
+    text: str = Field(description="Body of the note.")
+
+
 class RecipeSettings(BaseModel):
     public: bool = False
     showNutrition: bool = False
