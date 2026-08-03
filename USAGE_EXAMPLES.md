@@ -80,6 +80,19 @@ And these instructions:
 "Update the yield of the soup recipe to '6 servings'"
 ```
 
+### Parsing Ingredients
+
+```
+"Parse these ingredients against my Mealie vocabulary, then create the recipe:
+- 1/4 cup chopped onion
+- 2 large eggs
+- a pinch of salt"
+```
+
+One request resolves all of them into quantities, units, and foods with the ids
+needed to create the recipe. Ingredients your instance doesn't know come back
+with a null food or unit, so you can decide whether to add them.
+
 ### Nutrition & Notes
 
 **Nutrition (per serving):**

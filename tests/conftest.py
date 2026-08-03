@@ -33,6 +33,47 @@ BASE_RECIPE = {
 }
 
 
+def _parsed(text):
+    """A ParsedIngredient shaped like Mealie's, with the full food/unit records.
+
+    Unit is left unmatched so the flattening keeps a null visible.
+    """
+    return {
+        "input": text,
+        "confidence": {
+            "average": 0.996,
+            "comment": 0.993,
+            "name": None,
+            "unit": 0.999,
+            "quantity": 1.0,
+            "food": 0.991,
+        },
+        "ingredient": {
+            "quantity": 0.25,
+            "unit": None,
+            "food": {
+                "id": "a0819c33-1a5e-4374-9151-ed85160c0049",
+                "name": "onion",
+                "pluralName": "onions",
+                "description": "",
+                "extras": {},
+                "labelId": None,
+                "aliases": [],
+                "householdsWithIngredientFood": [],
+                "label": None,
+                "createdAt": "2026-08-03T02:15:22.603088Z",
+                "updatedAt": "2026-08-03T02:15:22.603092Z",
+            },
+            "referencedRecipe": None,
+            "note": "chopped",
+            "display": "¹/₄ cup onion chopped",
+            "title": None,
+            "originalText": None,
+            "referenceId": "75e1853f-3cb1-49b9-b2ca-26ae76da256b",
+        },
+    }
+
+
 class FakeFetcher(MealieFetcher):
     """MealieFetcher with the network layer replaced by a recorder.
 
@@ -73,6 +114,12 @@ class FakeFetcher(MealieFetcher):
             return self.created_slug
         if method == "GET" and url.startswith("/api/recipes/") and url.count("/") == 3:
             return dict(self.recipe)
+        if method == "POST" and url == "/api/parser/ingredient":
+            return _parsed((kwargs.get("json") or {}).get("ingredient"))
+        if method == "POST" and url == "/api/parser/ingredients":
+            return [
+                _parsed(text) for text in (kwargs.get("json") or {}).get("ingredients", [])
+            ]
         if method == "POST" and url.endswith("/assets"):
             data = kwargs.get("data") or {}
             return {
