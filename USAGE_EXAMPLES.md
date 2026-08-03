@@ -80,6 +80,17 @@ And these instructions:
 "Update the yield of the soup recipe to '6 servings'"
 ```
 
+### Recipe Assets
+
+**Attach the source document:**
+```
+"Attach /Users/me/Scans/braise-notes.pdf to the short rib recipe"
+"Attach that PDF as 'Original scan' with the mdi-file-pdf-box icon"
+```
+
+Mealie accepts a fixed set of extensions and derives the stored filename from
+the display name.
+
 ### Recipe Images
 
 **From URL:**

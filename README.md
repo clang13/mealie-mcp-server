@@ -129,7 +129,7 @@ Restart Claude Desktop to load the server.
 - `mark_recipe_last_made` - Update last made timestamp
 - `set_recipe_image_from_url` - Set image from URL
 - `upload_recipe_image_file` - Upload image file
-- `upload_recipe_asset_file` - Upload document/asset
+- `upload_recipe_asset_file` - Upload document/asset (optional display name and mdi icon)
 - `delete_recipe` - Delete recipe
 
 ### Shopping List Tools (14 operations)
