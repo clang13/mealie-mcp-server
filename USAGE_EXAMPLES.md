@@ -80,6 +80,36 @@ And these instructions:
 "Update the yield of the soup recipe to '6 servings'"
 ```
 
+### Nutrition & Notes
+
+**Nutrition (per serving):**
+```
+"Add nutrition to the chicken curry: 520 calories, 31g protein, 18g fat,
+ 42g carbs, 780mg sodium"
+```
+
+Mealie replaces the whole nutrition object, so ask for every value you want to
+keep in a single request.
+
+**Notes:**
+```
+"Add a note to the sourdough recipe titled 'Storage': keeps 4 days wrapped
+ in a tea towel, or 3 months frozen"
+"Add a substitution note to the brownies: swap the butter for coconut oil
+ to make it dairy-free"
+```
+
+### Recipe Assets
+
+**Attach the source document:**
+```
+"Attach /Users/me/Scans/braise-notes.pdf to the short rib recipe"
+"Attach that PDF as 'Original scan' with the mdi-file-pdf-box icon"
+```
+
+Mealie accepts a fixed set of extensions and derives the stored filename from
+the display name.
+
 ### Recipe Images
 
 **From URL:**
