@@ -7,6 +7,11 @@ def format_error_response(error_message: str) -> str:
     return json.dumps(error_response)
 
 
+def format_food_aliases(aliases: list) -> list:
+    """Convert bare alias strings into Mealie's {"name": ...} alias objects."""
+    return [{"name": alias} for alias in aliases]
+
+
 def format_api_params(params: dict) -> dict:
     """Formats list and None values in a dictionary for API parameters."""
     output = {}

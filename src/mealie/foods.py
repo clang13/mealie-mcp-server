@@ -1,7 +1,7 @@
 import logging
 from typing import Any, Dict, Optional
 
-from utils import format_api_params
+from utils import format_api_params, format_food_aliases
 
 logger = logging.getLogger("mealie-mcp")
 
@@ -43,6 +43,8 @@ class FoodsMixin:
         name: str,
         plural_name: Optional[str] = None,
         description: Optional[str] = None,
+        extras: Optional[Dict[str, Any]] = None,
+        aliases: Optional[list] = None,
     ) -> Dict[str, Any]:
         """Create a new food.
 
@@ -50,6 +52,10 @@ class FoodsMixin:
             name: Name of the food
             plural_name: Optional plural name
             description: Optional description
+            extras: Optional arbitrary key/value metadata, e.g. to link this
+                food to a record in another system
+            aliases: Optional alternate names the ingredient parser should
+                also match to this food
 
         Returns:
             JSON response containing the created food
@@ -62,6 +68,10 @@ class FoodsMixin:
             payload["pluralName"] = plural_name
         if description is not None:
             payload["description"] = description
+        if extras is not None:
+            payload["extras"] = extras
+        if aliases is not None:
+            payload["aliases"] = format_food_aliases(aliases)
 
         logger.info({"message": "Creating food", "name": name})
         return self._handle_request("POST", "/api/foods", json=payload)

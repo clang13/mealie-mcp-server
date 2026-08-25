@@ -6,6 +6,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
 
 from mealie import MealieFetcher
+from utils import format_food_aliases
 
 logger = logging.getLogger("mealie-mcp")
 
@@ -52,6 +53,8 @@ def register_foods_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
         name: str,
         plural_name: Optional[str] = None,
         description: Optional[str] = None,
+        extras: Optional[Dict[str, Any]] = None,
+        aliases: Optional[list[str]] = None,
     ) -> Dict[str, Any]:
         """Create a new food.
 
@@ -59,6 +62,11 @@ def register_foods_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
             name: Name of the food (e.g. "Reis").
             plural_name: Optional plural name.
             description: Optional description.
+            extras: Optional arbitrary key/value metadata, e.g. to link this
+                food to a record in another system.
+            aliases: Optional alternate names the ingredient parser should
+                also match to this food (e.g. ["white rice", "long grain
+                rice"] on "rice").
 
         Returns:
             Dict[str, Any]: The created food.
@@ -66,7 +74,11 @@ def register_foods_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
         try:
             logger.info({"message": "Creating food", "name": name})
             return mealie.create_food(
-                name, plural_name=plural_name, description=description
+                name,
+                plural_name=plural_name,
+                description=description,
+                extras=extras,
+                aliases=aliases,
             )
         except Exception as e:
             error_msg = f"Error creating food '{name}': {str(e)}"
@@ -103,6 +115,8 @@ def register_foods_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
         name: Optional[str] = None,
         plural_name: Optional[str] = None,
         description: Optional[str] = None,
+        extras: Optional[Dict[str, Any]] = None,
+        aliases: Optional[list[str]] = None,
     ) -> Dict[str, Any]:
         """Update a food's details (only provided fields are changed).
 
@@ -111,6 +125,9 @@ def register_foods_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
             name: New name for the food.
             plural_name: New plural name.
             description: New description.
+            extras: New extras object, replacing the existing one if provided.
+            aliases: New alias list, replacing the existing one if provided
+                (e.g. ["white rice", "long grain rice"]).
 
         Returns:
             Dict[str, Any]: The updated food.
@@ -125,6 +142,10 @@ def register_foods_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
                 food_data["pluralName"] = plural_name
             if description is not None:
                 food_data["description"] = description
+            if extras is not None:
+                food_data["extras"] = extras
+            if aliases is not None:
+                food_data["aliases"] = format_food_aliases(aliases)
 
             if not food_data:
                 raise ValueError("At least one field must be provided to update")

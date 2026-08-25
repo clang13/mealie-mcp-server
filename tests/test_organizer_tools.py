@@ -20,6 +20,21 @@ async def test_create_food(invoke, fetcher):
     assert req["json"] == {"name": "Reis", "pluralName": "Reissorten"}
 
 
+async def test_create_food_with_extras_and_aliases(invoke, fetcher):
+    await invoke(
+        "create_food",
+        name="rice",
+        extras={"grocy_product_id": "42"},
+        aliases=["white rice", "long grain rice"],
+    )
+    req = fetcher.last("POST", "/api/foods")
+    assert req["json"]["extras"] == {"grocy_product_id": "42"}
+    assert req["json"]["aliases"] == [
+        {"name": "white rice"},
+        {"name": "long grain rice"},
+    ]
+
+
 async def test_get_food_by_id(invoke, fetcher):
     await invoke("get_food", food_id="f1")
     assert fetcher.last("GET", "/api/foods/f1") is not None
@@ -31,6 +46,18 @@ async def test_update_food(invoke, fetcher):
     # fetch-merge: id kept, change applied (see test_bugfixes for full merge)
     assert req["json"]["id"] == "f1"
     assert req["json"]["description"] == "grain"
+
+
+async def test_update_food_with_extras_and_aliases(invoke, fetcher):
+    await invoke(
+        "update_food",
+        food_id="f1",
+        extras={"grocy_product_id": "42"},
+        aliases=["white rice"],
+    )
+    req = fetcher.last("PUT", "/api/foods/f1")
+    assert req["json"]["extras"] == {"grocy_product_id": "42"}
+    assert req["json"]["aliases"] == [{"name": "white rice"}]
 
 
 async def test_delete_food(invoke, fetcher):
