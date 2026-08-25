@@ -74,6 +74,49 @@ async def test_create_recipe_structured_ingredient_preserves_original_text(
     assert body["recipeIngredient"][0]["food"]["name"] == "rice"
 
 
+async def test_create_recipe_rejects_food_object_with_null_id(invoke, fetcher):
+    with pytest.raises(ToolError, match="food.id is required"):
+        await invoke(
+            "create_recipe",
+            name="Bad Ingredient",
+            ingredients=[
+                {
+                    "quantity": 1,
+                    "food": {"id": None, "name": "dried black beans"},
+                    "referenceId": "a1000001-0000-4000-8000-000000000002",
+                },
+            ],
+            instructions=["Cook it."],
+        )
+
+
+async def test_create_recipe_omitting_food_for_unmatched_ingredient_still_works(
+    invoke, fetcher
+):
+    await invoke(
+        "create_recipe",
+        name="Unmatched Ingredient",
+        ingredients=[
+            {
+                "note": "dried black beans",
+                "originalText": "1 pound (455 g) dried black beans",
+                "referenceId": "a1000001-0000-4000-8000-000000000003",
+            },
+            {
+                "quantity": 1,
+                "food": {"id": "f1", "name": "rice"},
+                "referenceId": "a1000001-0000-4000-8000-000000000004",
+            },
+        ],
+        instructions=["Cook it."],
+    )
+    body = fetcher.last("PUT", "/api/recipes/")["json"]
+    ings = body["recipeIngredient"]
+    assert ings[0].get("food") is None
+    assert ings[0]["originalText"] == "1 pound (455 g) dried black beans"
+    assert ings[1]["food"]["name"] == "rice"
+
+
 async def test_create_recipe_full_sets_metadata_tags_tools_and_image(invoke, fetcher):
     await invoke(
         "create_recipe_full",

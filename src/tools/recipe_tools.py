@@ -38,6 +38,16 @@ def _build_ingredient(
         return RecipeIngredient(note=ingredient)
     if isinstance(ingredient, RecipeIngredientInput):
         ingredient = ingredient.model_dump(exclude_none=True)
+    for field in ("food", "unit"):
+        value = ingredient.get(field)
+        if isinstance(value, dict) and not value.get("id"):
+            raise ValueError(
+                f"{field}.id is required when a {field} object is provided "
+                f"(got {value!r}); omit the {field} field entirely for an "
+                "unmatched ingredient instead of passing a null id -- "
+                "Mealie's API has no graceful handling for that and "
+                "returns an opaque 500."
+            )
     return RecipeIngredient(**ingredient)
 
 
