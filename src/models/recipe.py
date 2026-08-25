@@ -260,6 +260,16 @@ class RecipeIngredientInput(BaseModel):
     title: Optional[str] = Field(
         default=None, description="Section heading rendered above this ingredient."
     )
+    originalText: Optional[str] = Field(
+        default=None,
+        description=(
+            "The recipe's verbatim source line for this ingredient, e.g. "
+            '"1 cup white rice". Independent of food/unit/note — set it '
+            "regardless of how specific or generic the matched food is, so "
+            "the exact original wording survives even when the food link "
+            "doesn't carry that detail."
+        ),
+    )
 
 
 class RecipeInstructionInput(BaseModel):

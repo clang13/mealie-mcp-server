@@ -51,6 +51,29 @@ async def test_create_recipe_accepts_flat_and_structured(invoke, fetcher):
     ]
 
 
+async def test_create_recipe_structured_ingredient_preserves_original_text(
+    invoke, fetcher
+):
+    await invoke(
+        "create_recipe",
+        name="Fried Rice",
+        ingredients=[
+            {
+                "quantity": 1,
+                "food": {"id": "f1", "name": "rice"},
+                "note": "",
+                "originalText": "1 cup white rice",
+                "referenceId": "a1000001-0000-4000-8000-000000000001",
+            },
+        ],
+        instructions=["Cook it."],
+    )
+    body = fetcher.last("PUT", "/api/recipes/")["json"]
+    assert body["recipeIngredient"][0]["originalText"] == "1 cup white rice"
+    # the food link can be generic while the source wording stays specific
+    assert body["recipeIngredient"][0]["food"]["name"] == "rice"
+
+
 async def test_create_recipe_full_sets_metadata_tags_tools_and_image(invoke, fetcher):
     await invoke(
         "create_recipe_full",
