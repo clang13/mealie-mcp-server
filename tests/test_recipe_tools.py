@@ -90,6 +90,46 @@ async def test_create_recipe_rejects_food_object_with_null_id(invoke, fetcher):
         )
 
 
+async def test_create_recipe_deletes_stub_when_ingredient_build_fails(invoke, fetcher):
+    """A failure after the recipe is created must not leave an orphaned stub."""
+    with pytest.raises(ToolError, match="stub recipe 'test-recipe' was deleted"):
+        await invoke(
+            "create_recipe",
+            name="Bad Ingredient",
+            ingredients=[{"quantity": 1, "food": {"id": None, "name": "beans"}}],
+            instructions=["Cook it."],
+        )
+    assert fetcher.last("DELETE", "/api/recipes/test-recipe") is not None
+
+
+async def test_create_recipe_full_deletes_stub_when_ingredient_build_fails(
+    invoke, fetcher
+):
+    with pytest.raises(ToolError, match="stub recipe 'test-recipe' was deleted"):
+        await invoke(
+            "create_recipe_full",
+            name="Bad Recipe",
+            ingredients=[{"quantity": 1, "food": {"id": None, "name": "beans"}}],
+            instructions=["Cook it."],
+        )
+    assert fetcher.last("DELETE", "/api/recipes/test-recipe") is not None
+
+
+async def test_create_recipe_warns_when_stub_cleanup_itself_fails(invoke, fetcher):
+    """A failed cleanup must surface as a warning, not mask the real error."""
+    fetcher.fail_on("/api/recipes/test-recipe", 500, "Mealie is down")
+    with pytest.raises(
+        ToolError,
+        match=r"Mealie is down.*could not be deleted and is still in Mealie",
+    ):
+        await invoke(
+            "create_recipe",
+            name="Bad Recipe",
+            ingredients=["1 cup rice"],
+            instructions=["Cook it."],
+        )
+
+
 async def test_create_recipe_omitting_food_for_unmatched_ingredient_still_works(
     invoke, fetcher
 ):

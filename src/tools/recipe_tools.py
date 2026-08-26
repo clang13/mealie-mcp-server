@@ -120,6 +120,24 @@ def _normalize_references(recipe: Recipe) -> None:
 def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
     """Register all recipe-related tools with the MCP server."""
 
+    def _cleanup_stub(slug: str) -> str:
+        """Delete a just-created recipe after a later step in the same call fails.
+
+        create_recipe/create_recipe_full create the recipe first, then fill it
+        in with a second call that can fail (a bad ingredient, a rejected
+        field). Without this, that failure leaves an empty, orphaned recipe
+        behind with no indication it happened. Returns a note for the error
+        message; never raises, so a failed cleanup doesn't mask the real error.
+        """
+        try:
+            mealie.delete_recipe(slug)
+            return f" (the empty stub recipe '{slug}' was deleted)"
+        except Exception as cleanup_error:
+            return (
+                f" (WARNING: the empty stub recipe '{slug}' could not be "
+                f"deleted and is still in Mealie: {cleanup_error})"
+            )
+
     @mcp.tool()
     def get_recipes(
         search: Optional[str] = None,
@@ -274,6 +292,15 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
         try:
             logger.info({"message": "Creating recipe", "name": name})
             slug = mealie.create_recipe(name)
+        except Exception as e:
+            error_msg = f"Error creating recipe '{name}': {str(e)}"
+            logger.error({"message": error_msg})
+            logger.debug(
+                {"message": "Error traceback", "traceback": traceback.format_exc()}
+            )
+            raise ToolError(error_msg)
+
+        try:
             recipe_json = mealie.get_recipe(slug)
             recipe = Recipe.model_validate(recipe_json)
             recipe.recipeIngredient = [_build_ingredient(i) for i in ingredients]
@@ -281,7 +308,7 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
             _normalize_references(recipe)
             return mealie.update_recipe(slug, recipe.model_dump(exclude_none=True))
         except Exception as e:
-            error_msg = f"Error creating recipe '{name}': {str(e)}"
+            error_msg = f"Error creating recipe '{name}': {str(e)}{_cleanup_stub(slug)}"
             logger.error({"message": error_msg})
             logger.debug(
                 {"message": "Error traceback", "traceback": traceback.format_exc()}
@@ -423,6 +450,15 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
         try:
             logger.info({"message": "Creating full recipe", "name": name})
             slug = mealie.create_recipe(name)
+        except Exception as e:
+            error_msg = f"Error creating full recipe '{name}': {str(e)}"
+            logger.error({"message": error_msg})
+            logger.debug(
+                {"message": "Error traceback", "traceback": traceback.format_exc()}
+            )
+            raise ToolError(error_msg)
+
+        try:
             recipe_json = mealie.get_recipe(slug)
             recipe = Recipe.model_validate(recipe_json)
 
@@ -471,7 +507,7 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
 
             return updated
         except Exception as e:
-            error_msg = f"Error creating full recipe '{name}': {str(e)}"
+            error_msg = f"Error creating full recipe '{name}': {str(e)}{_cleanup_stub(slug)}"
             logger.error({"message": error_msg})
             logger.debug(
                 {"message": "Error traceback", "traceback": traceback.format_exc()}
